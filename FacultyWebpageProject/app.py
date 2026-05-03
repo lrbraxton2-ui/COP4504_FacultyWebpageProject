@@ -59,6 +59,7 @@ def index():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
+    # If a search term is provided, filter the faculty records based on the search term
     if search:
         query = """
             SELECT 
@@ -141,6 +142,7 @@ def index():
         search=search
     )
 
+# Admin route to create a new faculty profile
 @app.route("/admin")
 def admin():
     return render_template("edit.html", faculty=None, selected_courses=[])
