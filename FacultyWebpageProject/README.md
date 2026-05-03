@@ -63,6 +63,7 @@ FacultyWebpageProject/
 │   └── images/
 │       ├── spc-logo.png            # SPC logo
 │       └── user-female.png         # Default faculty profile image
+```
 
 ## Setup Instructions
 
