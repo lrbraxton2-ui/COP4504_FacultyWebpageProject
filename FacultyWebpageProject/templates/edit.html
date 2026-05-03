@@ -16,8 +16,8 @@
 
     <header class="site-header">
       <div class="d-flex flex-wrap justify-content-center py-2 mb-4" id="header">
-        <a href="{{ url_for('home') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-          <span class="fs-4"><img src="" class="header-logo" alt="SPC Logo"></span>
+        <a href="{{ url_for('index') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+          <span class="fs-4"><img src="{{ url_for('static', filename='images/spc-logo.png') }}" class="header-logo" alt="SPC Logo"></span>
         </a>
       </div>
 
@@ -25,8 +25,8 @@
         <div></div>
 
         <nav class="main-nav">
-          <a href="{{ url_for('home') }}">Home</a>
-          <a href="#">Admin</a>
+          <a href="{{ url_for('index') }}">Home</a>
+          <a href="{{ url_for('admin') }}">Admin</a>
           <a href="{{ url_for('edit') }}" class="active">Edit</a>
         </nav>
 
@@ -35,6 +35,12 @@
     </header>
 
     <main class="edit-page">
+
+      {% if faculty %}
+        <h1>Edit Faculty Information - {{ faculty.first_name }} {{ faculty.last_name }}</h1>
+      {% else %}
+        <h1>Add New Faculty Member</h1>
+      {% endif %}
 
       {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -46,7 +52,7 @@
         {% endif %}
       {% endwith %}
 
-      <form method="POST" action="{{ url_for('save') }}" class="faculty-form">
+      <form method="POST" action="{{ url_for('save') }}" class="faculty-form" enctype="multipart/form-data">
 
         {% if faculty %}
           <input type="hidden" name="faculty_id" value="{{ faculty.faculty_id }}">
@@ -88,7 +94,7 @@
 
               <div class="field">
                 <label for="campus">Campus</label>
-                <input type="text" id="campus" name="campus" value="{{ faculty.campus if faculty else '' }}" />
+                <input type="text" id="campus" name="campus" value="{{ faculty.campus_location if faculty else '' }}" />
               </div>
             </div>
 
@@ -100,7 +106,7 @@
 
               <div class="field">
                 <label for="office-location">Office Location</label>
-                <input type="text" id="office-location" name="office_location" value="{{ faculty.office_location if faculty else '' }}" />
+                <input type="text" id="office-location" name="office_location" value="{{ faculty.office_location if faculty else '' }}" data-original-value="{{ faculty.office_location if faculty else '' }}" />
               </div>
             </div>
 
@@ -112,14 +118,14 @@
 
               <div class="field">
                 <label for="office-phone">Office Phone</label>
-                <input type="text" id="office-phone" name="office_phone" value="{{ faculty.phone_number if faculty else '' }}" />
+                <input type="text" id="office-phone" name="office_phone" value="{{ faculty.phone_number if faculty else '' }}" data-original-value="{{ faculty.phone_number if faculty else '' }}"  />
               </div>
             </div>
 
             <div class="row">
               <div class="field full-width">
                 <label for="office-hours">Office Hours</label>
-                <input type="text" id="office-hours" name="office_hours" value="{{ faculty.office_hours if faculty else '' }}" />
+                <input type="text" id="office-hours" name="office_hours" value="{{ faculty.office_hours if faculty else '' }}" data-original-value="{{ faculty.office_hours if faculty else '' }}" />
               </div>
             </div>
 
@@ -130,17 +136,17 @@
 
             <section class="editor-section">
               <h2>About Me</h2>
-              <textarea name="about_me" rows="6">{{ faculty.about_me if faculty else '' }}</textarea>
+              <textarea name="about_me" rows="6" data-original-value="{{ faculty.about_me if faculty else '' }}">{{ faculty.about_me if faculty else '' }}</textarea>
             </section>
 
             <section class="editor-section">
               <h2>Education</h2>
-              <textarea name="education" rows="6">{{ faculty.education if faculty else '' }}</textarea>
+              <textarea name="education" rows="6" data-original-value="{{ faculty.education if faculty else '' }}">{{ faculty.education if faculty else '' }}</textarea>
             </section>
 
             <section class="editor-section">
               <h2>Research / Publications</h2>
-              <textarea name="research_publications" rows="6">{{ faculty.research_publications if faculty else '' }}</textarea>
+              <textarea name="research_publications" rows="6" data-original-value="{{ faculty.research_publications if faculty else '' }}">{{ faculty.research_publications if faculty else '' }}</textarea>
             </section>
 
             <fieldset class="checkbox-group courses-box">
@@ -163,25 +169,7 @@
               </div>
             </fieldset>
 
-            {% if faculty and selected_courses %}
-              <section class="editor-section">
-                <h2>Delete a Course</h2>
-
-                {% for course in selected_courses %}
-                  <form
-                    method="POST"
-                    action="{{ url_for('delete_course', faculty_id=faculty.faculty_id, course_id=course) }}"
-                    onsubmit="return confirm('Are you sure you want to delete this course?');"
-                  >
-                    <p>
-                      {{ course }}
-                      <button type="submit" class="delete-btn">Delete</button>
-                    </p>
-                  </form>
-                {% endfor %}
-              </section>
-            {% endif %}
-
+            
           </section>
 
         </div>
@@ -189,5 +177,85 @@
 
     </main>
   </div>
+
+<script>
+  let formChanged = false;
+  let formSubmitted = false;
+
+  const facultyForm = document.querySelector(".faculty-form");
+
+  if (facultyForm) {
+    const formFields = facultyForm.querySelectorAll("input, textarea, select");
+
+    formFields.forEach(function(field) {
+      field.addEventListener("input", function() {
+        formChanged = true;
+      });
+
+      field.addEventListener("change", function() {
+        formChanged = true;
+      });
+    });
+
+    facultyForm.addEventListener("submit", function(event) {
+      const shouldSave = confirmSaveChanges();
+
+      if (!shouldSave) {
+        event.preventDefault();
+        return;
+      }
+
+      formSubmitted = true;
+    });
+  }
+
+  function confirmSaveChanges() {
+    const optionalFields = [
+      { name: "office_location", label: "Office Location" },
+      { name: "office_phone", label: "Office Phone" },
+      { name: "office_hours", label: "Office Hours" },
+      { name: "about_me", label: "About Me" },
+      { name: "education", label: "Education" },
+      { name: "research_publications", label: "Research / Publications" }
+    ];
+
+    const clearedFields = [];
+
+    optionalFields.forEach(function(field) {
+      const input = document.querySelector(`[name="${field.name}"]`);
+
+      if (!input) {
+        return;
+      }
+
+      const originalValue = input.dataset.originalValue || "";
+      const currentValue = input.value.trim();
+
+      if (originalValue.trim() !== "" && currentValue === "") {
+        clearedFields.push(field.label);
+      }
+    });
+
+    if (clearedFields.length > 0) {
+      const removeMessage =
+        "You cleared the following optional field(s):\n\n" +
+        clearedFields.join("\n") +
+        "\n\nDo you want to remove this information from the profile?";
+
+      if (!confirm(removeMessage)) {
+        return false;
+      }
+    }
+
+    return confirm("Are you sure you want to save changes?");
+  }
+
+  window.addEventListener("beforeunload", function(event) {
+    if (formChanged && !formSubmitted) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+</script>
 </body>
 </html>

@@ -10,11 +10,13 @@ app.secret_key = os.getenv("SECRET_KEY")
 
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        host=os.getenv("MYSQLHOST") or os.getenv("DB_HOST"),
+        port=int(os.getenv("MYSQLPORT") or 3306),
+        user=os.getenv("MYSQLUSER") or os.getenv("DB_USER"),
+        password=os.getenv("MYSQLPASSWORD") or os.getenv("DB_PASSWORD"),
+        database=os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME")
     )
+
 def split_name(full_name):
     parts = full_name.strip().split(" ", 1)
     first_name = parts[0]
@@ -51,35 +53,89 @@ def get_or_create_department(cursor, dept_name):
     return cursor.lastrowid
 
 @app.route("/")
-def home():
+def index():
+    search = request.args.get("search", "")
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        select f.*, d.dept_name
-        from faculty f
-        left join departments d on f.dept_id = d.dept_id
-        order by f.faculty_id desc
-        limit 1
-    """)
+    if search:
+        query = """
+            SELECT 
+                faculty.faculty_id,
+                faculty.title,
+                faculty.first_name,
+                faculty.last_name,
+                faculty.campus_location,
+                faculty.office_location,
+                faculty.email_address,
+                faculty.phone_number,
+                faculty.about_me,
+                faculty.education,
+                faculty.research_publications,
+                faculty.office_hours,
+                departments.dept_name
+            FROM faculty
+            LEFT JOIN departments 
+                ON faculty.dept_id = departments.dept_id
+            WHERE faculty.first_name LIKE %s
+               OR faculty.last_name LIKE %s
+               OR faculty.title LIKE %s
+               OR faculty.campus_location LIKE %s
+               OR departments.dept_name LIKE %s
+        """
 
-    faculty = cursor.fetchone()
+        search_value = f"%{search}%"
 
-    courses = []
-    if faculty:
-        cursor.execute("""
-            select c.course_id
-            from faculty_courses fc
-            join courses c on fc.course_id = c.course_id
-            where fc.faculty_id = %s
-        """, (faculty["faculty_id"],))
-        courses = cursor.fetchall()
+        cursor.execute(query, (
+            search_value,
+            search_value,
+            search_value,
+            search_value,
+            search_value
+        ))
+
+    else:
+        query = """
+            SELECT 
+                faculty.faculty_id,
+                faculty.title,
+                faculty.first_name,
+                faculty.last_name,
+                faculty.campus_location,
+                faculty.office_location,
+                faculty.email_address,
+                faculty.phone_number,
+                faculty.about_me,
+                faculty.education,
+                faculty.research_publications,
+                faculty.office_hours,
+                departments.dept_name
+            FROM faculty
+            LEFT JOIN departments 
+                ON faculty.dept_id = departments.dept_id
+        """
+
+        cursor.execute(query)
+
+    faculty_records = cursor.fetchall()
+
+    cursor.execute("SELECT course_id FROM courses ORDER BY course_id")
+    courses = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return render_template("index.html", faculty=faculty, courses=courses)
+    return render_template(
+        "index.html",
+        faculty_records=faculty_records,
+        courses=courses,
+        search=search
+    )
 
+@app.route("/admin")
+def admin():
+    return render_template("edit.html", faculty=None, selected_courses=[])
 
 @app.route("/edit")
 def edit():
@@ -224,7 +280,7 @@ def save():
     conn.close()
 
     flash("Faculty profile saved successfully.")
-    return redirect(url_for("home"))
+    return redirect(url_for("index"))
 
 @app.route("/delete-course/<int:faculty_id>/<course_id>", methods=["POST"])
 def delete_course(faculty_id, course_id):
@@ -255,4 +311,5 @@ def db_test():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

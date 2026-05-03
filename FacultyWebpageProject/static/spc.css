@@ -20,10 +20,3 @@ body {
   border-color: #d29f2a;
 }
 
-.profile-img {
-  content: url("images/user-female.png");
-}
-
-.header-logo {
-  content: url("images/spc-logo.png");
-}

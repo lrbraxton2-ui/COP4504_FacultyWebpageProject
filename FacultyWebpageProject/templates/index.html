@@ -16,8 +16,8 @@
     <header class="site-header">
 
       <div class="d-flex flex-wrap justify-content-center py-2 mb-4" id="header">
-        <a href="{{ url_for('home') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-          <span class="fs-4"><img src="" class="header-logo" alt="SPC Logo"></span>
+        <a href="{{ url_for('index') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+          <span class="fs-4"><img src="{{ url_for('static', filename='images/spc-logo.png') }}" class="header-logo" alt="SPC Logo"></span>
         </a>
       </div>
 
@@ -25,20 +25,28 @@
         <div></div>
 
         <nav class="main-nav" aria-label="Primary navigation">
-          <a class="active" href="{{ url_for('home') }}">Home</a>
-          <a href="#">Admin</a>
+          <a class="active" href="{{ url_for('index') }}">Home</a>
+          <a href="{{ url_for('admin') }}">Admin</a>
           <a href="{{ url_for('edit') }}">Edit</a>
         </nav>
 
-        <form class="search-form" action="#" method="get">
-          <input id="faculty-search" type="search" placeholder="Faculty Search" />
+        <form class="search-form" action="{{ url_for('index') }}" method="get">
+          <input 
+            id="faculty-search" 
+            name="search"
+            type="search" 
+            placeholder="Faculty Search"
+            value="{{ search }}"
+          />
         </form>
       </div>
     </header>
 
     <main class="home-page">
 
-      {% if faculty %}
+      {% if faculty_records %}
+
+        {% for faculty in faculty_records %}
 
       <div class="home-layout">
 
@@ -56,7 +64,7 @@
 
           <div class="info-group">
             <h2>Campus Location</h2>
-            <p>{{ faculty.campus }}</p>
+            <p>{{ faculty.campus_location }}</p>
           </div>
 
           <div class="info-group">
@@ -118,6 +126,8 @@
           {% endfor %}
         </div>
       </section>
+
+      {% endfor %}
 
       {% else %}
 
