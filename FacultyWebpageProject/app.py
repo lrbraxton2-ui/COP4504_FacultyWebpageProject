@@ -120,8 +120,17 @@ def index():
 
     faculty_records = cursor.fetchall()
 
-    cursor.execute("SELECT course_id FROM courses ORDER BY course_id")
-    courses = cursor.fetchall()
+    for faculty in faculty_records:
+        cursor.execute("""
+            SELECT c.course_id
+            FROM faculty_courses fc
+            JOIN courses c 
+                ON fc.course_id = c.course_id
+            WHERE fc.faculty_id = %s
+            ORDER BY c.course_id
+        """, (faculty["faculty_id"],))
+
+        faculty["courses"] = cursor.fetchall()
 
     cursor.close()
     conn.close()
@@ -129,7 +138,6 @@ def index():
     return render_template(
         "index.html",
         faculty_records=faculty_records,
-        courses=courses,
         search=search
     )
 
